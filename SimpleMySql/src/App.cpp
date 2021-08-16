@@ -3,6 +3,10 @@
 #include "logging/SimpleLogger.h"
 #include "Widgets.h"
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <algorithm>
 namespace simple
 {
 	App::App() :
@@ -10,9 +14,16 @@ namespace simple
 		m_ImGuiApp(m_Window.GetWindow()),
 		m_Driver(sql::mysql::get_mysql_driver_instance())
 	{
+
 		m_TextEditor.SetPalette(TextEditor::GetRetroBluePalette());
 		m_TextEditor.SetLanguageDefinition(TextEditor::LanguageDefinition::MySQL());
-		m_TextEditor.SetTextLines({ "", "", "", "", "" });
+
+		ReadSaveFile();
+	}
+
+	App::~App()
+	{
+		WriteSaveFile();
 	}
 
 	void App::Start()
@@ -86,12 +97,12 @@ namespace simple
 		//ImGui::ShowDemoWindow();
 		if (!m_LoginSuccess)
 		{
-			auto [user, password] = LoginModal();
-			if (user.length() > 0 && password.length() > 0)
+			//auto [user, password] = LoginModal(m_User, m_Password);
+			if (LoginModal(m_User, m_Password))
 			{
 				try
 				{
-					m_Connection.reset(m_Driver->connect("tcp://127.0.0.1:3306", user, password));
+					m_Connection.reset(m_Driver->connect("tcp://127.0.0.1:3306", m_User, m_Password));
 					m_Stmt.reset(m_Connection->createStatement());
 					m_LoginSuccess = true;
 				}
@@ -161,7 +172,7 @@ namespace simple
 			{
 				ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
 				for (auto& c : m_Columns)
-					ImGui::TableSetupColumn(c.c_str(), ImGuiTableColumnFlags_WidthFixed);
+					ImGui::TableSetupColumn(c.c_str(), ImGuiTableColumnFlags_WidthStretch);
 
 				ImGui::TableHeadersRow();
 				for (size_t i = 0; i < m_Rows.size() / m_Columns.size(); i++)
@@ -216,5 +227,65 @@ namespace simple
 		}
 
 		return false;
+	}
+
+	void App::ReadSaveFile()
+	{
+
+		std::ifstream file("simplemysql.save", std::ios::binary);
+		std::string line;
+		std::vector<std::string> tempCode;
+		bool findOutUser = false;
+		bool findOutPassword = false;
+		bool findOutText = false;
+		constexpr std::string_view userKey = "user:";
+		constexpr std::string_view passwordKey = "password:";
+		auto readUserPassword = [&line](std::string_view key, bool& findOut, auto& value) {
+			auto pos = line.find(key);
+			if (pos != std::string::npos)
+			{
+				value = line.substr(key.size() + 1);
+				value.replace(std::remove_if(value.begin(), value.end(), [&](const char c) { return (c == '\n') || (c == '\r'); }), value.end(), "");
+				findOut = true;
+				return true;
+			}
+			return false;
+		};
+		if(file.is_open())
+			while (std::getline(file, line))
+			{
+				if (!findOutUser)
+				{
+					if (readUserPassword(userKey, findOutUser, m_User)) continue;
+				}
+				if (!findOutPassword)
+				{
+					if (readUserPassword(passwordKey, findOutPassword, m_Password)) continue;
+				}
+
+				if (findOutUser && findOutPassword)
+				{
+					tempCode.push_back(line);
+				}
+			}
+
+		if (tempCode.size() > 0) { m_TextEditor.SetTextLines(tempCode); };
+
+		file.close();
+		//Logger::Info(std::filesystem::current_path());
+
+	}
+
+	void App::WriteSaveFile()
+	{
+		std::ofstream file("simplemysql.save", std::ios::binary);
+		if (file.is_open())
+		{
+			file << "user: " + m_User + '\n';
+			file << "password: " + m_Password + '\n';
+			const auto code = m_TextEditor.GetTextLines();
+			for (const auto& l : code)
+				file << l + '\n';
+		}
 	}
 }

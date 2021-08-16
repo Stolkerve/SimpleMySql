@@ -53,7 +53,7 @@ ImVec2 CalButtomSize(std::string_view label)
     return ImGui::CalcItemSize({ 0.f, 0.f }, label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
 }
 
-UserDetails LoginModal()
+bool LoginModal(std::string& lastUser, std::string& lastPassword)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 5.0f, 5.0f });
     ImGui::OpenPopup("LoginModal");
@@ -64,24 +64,25 @@ UserDetails LoginModal()
 
     if (ImGui::BeginPopupModal("LoginModal", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        //ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-        static std::string user;
-        static std::string password;
+        // ImGuiInputTextFlags_Password
+        // ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        //static std::string user = lastUser.length() > 0 ? lastUser : "";
+        //static std::string password = lastPassword.length() > 0 ? lastPassword : "";
         ImGui::Text("Username");
-        InputText("##username", &user);
+        InputText("##username", &lastUser);
 
         ImGui::Text("Password");
-        InputText("##password", &password);
+        InputText("##password", &lastPassword, ImGuiInputTextFlags_Password);
 
         if (ImGui::Button("Submit", ImVec2(120, 0)))
         {
-            UserDetails tempUserDetails = { user, password };
-            user.clear();
-            password.clear();
+            //UserDetails tempUserDetails = { user, password };
+            //user.clear();
+            //password.clear();
             ImGui::CloseCurrentPopup();
             ImGui::PopStyleVar();
             ImGui::EndPopup();
-            return tempUserDetails;
+            return true;
         }
         
         if (ImGui::Button("Instructions"))
@@ -100,5 +101,5 @@ UserDetails LoginModal()
         ImGui::EndPopup();
     }
     ImGui::PopStyleVar();
-    return { "", "" };
+    return false;
 }

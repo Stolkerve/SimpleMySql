@@ -16,6 +16,7 @@ namespace simple
 	{
 	public:
 		App();
+		~App();
 		
 		void Start();
 	private:
@@ -24,6 +25,9 @@ namespace simple
 		void RenderTables();
 
 		bool ExecutingQuery();
+
+		void ReadSaveFile();
+		void WriteSaveFile();
 	private:
 		Window m_Window;
 		ImGuiApp m_ImGuiApp;
@@ -38,5 +42,8 @@ namespace simple
 		std::vector<std::string> m_Columns;
 		std::vector<std::string> m_Rows;
 		std::vector<std::vector<std::string>> m_Matrix;
+
+		std::string m_User;
+		std::string m_Password;
 	};
 }
